@@ -1,9 +1,9 @@
 <?php
 //============================================================+
 // File name   : tcpdi_parser.php
-// Version     : 1.0
+// Version     : 1.1
 // Begin       : 2013-09-25
-// Last Update : 2013-09-25
+// Last Update : 2016-05-03
 // Author      : Paul Nicholls - https://github.com/pauln
 // License     : GNU-LGPL v3 (http://www.gnu.org/copyleft/lesser.html)
 //
@@ -44,7 +44,7 @@
  * This is a PHP class for parsing PDF documents.<br>
  * @author Paul Nicholls
  * @author Nicola Asuni
- * @version 1.0
+ * @version 1.1
  */
 
 // include class for decoding filters
@@ -82,7 +82,7 @@ if (!defined ('PDF_TYPE_REAL'))
  * This is a PHP class for parsing PDF documents.<br>
  * Based on TCPDF_PARSER, part of the TCPDF project by Nicola Asuni.
  * @brief This is a PHP class for parsing PDF documents..
- * @version 1.0
+ * @version 1.1
  * @author Paul Nicholls - github.com/pauln
  * @author Nicola Asuni - info@tecnick.com
  */
@@ -483,7 +483,7 @@ class tcpdi_parser {
             $v = $sarr[$key];
             if (($key == '/Type') AND ($v[0] == PDF_TYPE_TOKEN AND ($v[1] == 'XRef'))) {
                 $valid_crs = true;
-            } elseif (($key == '/Index') AND ($v[0] == PDF_TYPE_ARRAY AND ($v[1] >= 2))) {
+            } elseif (($key == '/Index') AND ($v[0] == PDF_TYPE_ARRAY AND count($v[1]) >= 2)) {
                 // first object number in the subsection
                 $index_first = intval($v[1][0][1]);
                 // number of entries in the subsection
@@ -1010,7 +1010,7 @@ class tcpdi_parser {
                 $objs = $streaminfo[0];
                 if (!isset($this->objstreams[$objs[0]][$objs[1]])) {
                     // Fetch and decode object stream
-                    $offset = $this->findObjectOffset($objs);;
+                    $offset = $this->findObjectOffset($objs);
                     $objstream = $this->getObjectVal(array(PDF_TYPE_OBJREF, $objs[0], $objs[1]));
                     $decoded = $this->decodeStream($objstream[1][1], $objstream[2][1]);
                     $this->objstreams[$objs[0]][$objs[1]] = $decoded[0]; // Store just the data, in case we need more from this objstream
@@ -1022,7 +1022,11 @@ class tcpdi_parser {
                 $object = $this->objects[$key[0]][$key[1]];
             }
             if (!is_null($object)) {
-                $ret[1] = $object[0];
+                if(is_array($object[0])) {
+                    $ret[1] = $object[0];
+                } else {
+                    $ret[1] = $object;
+                }
                 if (isset($object[1][0]) && $object[1][0] == PDF_TYPE_STREAM) {
                     $ret[0] = PDF_TYPE_STREAM;
                     $ret[2] = $object[1];
@@ -1219,6 +1223,42 @@ class tcpdi_parser {
         }
     }
 
+    /**
+     * Get annotations from current page
+     *
+     * @return array
+     */
+    public function getPageAnnotations() {
+        return $this->_getPageAnnotations($this->pages[$this->pageno]);
+    }
+
+    /**
+     * Get annotations from /Page
+     *
+     * @param array $obj Array of pdf-data
+     */
+    private function _getPageAnnotations ($obj) { // $obj = /Page
+        $obj = $this->getObjectVal($obj);
+
+        // If the current object has an annotations
+        // dictionary associated with it, we use
+        // it. Otherwise, we move back to its
+        // parent object.
+        if (isset ($obj[1][1]['/Annots'])) {
+            $annots = $obj[1][1]['/Annots'];
+        } else {
+            if (!isset ($obj[1][1]['/Parent'])) {
+                return false;
+            } else {
+                $annots = $this->_getPageAnnotations($obj[1][1]['/Parent']);
+            }
+        }
+
+        if ($annots[0] == PDF_TYPE_OBJREF)
+            return $this->getObjectVal($annots);
+        return $annots;
+    }
+
 
     /**
      * Get content of current page
@@ -1390,8 +1430,7 @@ class tcpdi_parser {
                 return false;
             } else {
                 $res = $this->_getPageRotation($obj[1][1]['/Parent']);
-
-                if (is_array($res) && $res[0] == PDF_TYPE_OBJECT)
+                if ($res && $res[0] == PDF_TYPE_OBJECT)
                     return $res[1];
                 return $res;
             }
