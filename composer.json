@@ -1,5 +1,5 @@
 {
-    "name": "daltcore/lara-pdf-merger",
+    "name": "mabbly/lara-pdf-merger",
     "description": "",
     "keywords": ["merger","merge","pdf","manage","paginate", "laravel", "duplex merge"],
     "license" : [
@@ -18,12 +18,15 @@
             "name": "Marouan Sami",
             "email": "sami.marwen.isetcom@gmail.com",
             "homepage": "https://github.com/MarwenSami"
+        }, {
+            "name": "Raju Mandapati",
+            "homepage": "https://github.com/therajumandapati"
         }
     ],
     "require": {
         "php" : ">=5.4"
     },
-    "homepage" : "https://github.com/MarwenSami/lara-pdf-merger",
+    "homepage" : "https://github.com/mabbly/lara-pdf-merger",
     "autoload": {
         "psr-0": {
             "LynX39\\LaraPdfMerger": "src/"
